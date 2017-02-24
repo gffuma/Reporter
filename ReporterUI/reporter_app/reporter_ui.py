@@ -3,6 +3,10 @@ from flask import render_template, jsonify, request, abort, redirect, url_for
 import datetime
 import reporter_app.data_aggregator as dagg
 
+@app.context_processor
+def inject_debug():
+    return dict(debug=app.debug)
+
 @app.route('/manager', methods=['GET'])
 def manager():
     return render_template('create_report.template')
@@ -33,7 +37,7 @@ def report(id):
 def last_report():
     id =  dagg.get_last_report()["id"]
     return redirect(url_for("report", id=id))
-    
+
 
 
 @app.route('/', methods=['GET'])
