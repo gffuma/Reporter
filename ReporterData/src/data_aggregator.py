@@ -10,6 +10,11 @@ import time
 import json
 import glob
 import yaml
+import wtl
+
+pconfig = yaml.load(open('/etc/reporter-providers.conf','r'))
+
+notify_config = pconfig["gateway"]
 
 #init the db client
 client = MongoClient(config.DB_HOST, config.DB_PORT)
@@ -23,8 +28,12 @@ def update_settings():
     #getting previous metadata_id
     previous_metadata = list(db["reports_metadata"].find({}))
     new_ids = []
-    for repo in glob.glob(config.metadata_dir+"/*.yaml"):
-        meta = yaml.load(open(repo, "r"))
+    for rep_def in glob.glob(config.metadata_dir+"/*.yaml"):
+        try:
+            meta = yaml.load(open(rep_def, "r"))
+        except:
+            wtl.send_notify({"data": "Error while reading config {}".format(rep_def)}, "test", notify_config)
+            continue
         print(">>> Reading report: {}".format(meta["id"]))
         new_ids.append(meta["id"])
         fetch_data(meta["id"], meta["start_date"],
@@ -47,6 +56,7 @@ def fetch_data(id, start_date, end_date, repos, phab_groups, mediawiki_langs, me
     data = db["reports_data"].find_one({"id":id})
     old_metadata = db["reports_metadata"].find_one({"id":id})
     if data == None or data["start_date"]!= start_date or data["end_date"]!=end_date:
+        wtl.send_notify({"data": "Creating report {}".format(id)}, "test", notify_config)
         data = {"id": id, "start_date": start_date, "end_date": end_date}
         data["git"] = []
         data["phabricator"] = []
@@ -75,6 +85,7 @@ def fetch_data(id, start_date, end_date, repos, phab_groups, mediawiki_langs, me
     #adding new requested repos
     for repo in repos:
         if repo not in git_metadata:
+            wtl.send_notify({"data": "Adding git {} to report {}".format(repo,id)}, "test", notify_config)
             new_git_data.append(gp.get_complete_stats(repo, start_date, end_date))
     #saving new data
     data["git"] = new_git_data
@@ -98,9 +109,11 @@ def fetch_data(id, start_date, end_date, repos, phab_groups, mediawiki_langs, me
     for ph_gr in phab_groups:
         if ph_gr in ph_metadata:
             if  phab_groups[ph_gr] != ph_metadata[ph_gr]:
+                wtl.send_notify({"data": "Updating phab group {} to report {}".format(ph_gr,id)}, "test", notify_config)
                 new_phab_data.append(pp.calculate_generic_stats(ph_gr,phab_groups[ph_gr],
                                                      start_date, end_date))
         else:
+            wtl.send_notify({"data": "Adding phab group {} to report {}".format(ph_gr,id)}, "test", notify_config)
             new_phab_data.append(pp.calculate_generic_stats(ph_gr,phab_groups[ph_gr],
                                                  start_date, end_date))
     #saving new data
@@ -120,8 +133,8 @@ def fetch_data(id, start_date, end_date, repos, phab_groups, mediawiki_langs, me
         else:
             print("Deleted mediawiki lang {}".format(omd))
     for mlang in mediawiki_langs:
-        if mlang not in data["mediawiki"] or set(
-            mediawiki_old_blacklist).symmetric_difference(set(mediawiki_blacklist)) !=set():
+        if mlang not in data["mediawiki"] or set(mediawiki_old_blacklist).symmetric_difference(set(mediawiki_blacklist)) !=set():
+            wtl.send_notify({"data": "Fetching mediawiki lang {} to report {}".format(mlang,id)}, "test", notify_config)
             print("Fetching lang: {}".format(mlang))
             new_mediawiki_data[mlang] = mp.get_mediawiki_stats(mlang,
                                         start_date, end_date, mediawiki_blacklist)

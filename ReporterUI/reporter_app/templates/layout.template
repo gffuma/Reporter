@@ -26,7 +26,7 @@
     <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.min.js"></script>
 
-
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" />
 
     <style>
     body {
@@ -40,7 +40,7 @@
         <div class="col-md-12">
             <header class="header">
                 <div style="margin-top: 15px; margin-bottom:-10px;">
-                    <a href="/"> <img src="//i.imgur.com/UpuaNZD.png" class="center-block img-responsive" /></a>
+                    <a href="/"> <img src="{{ url_for('static', filename='img/logo.png')}}" class="center-block img-responsive" /></a>
                     <!-- <h3 style="text-align:center;">WikiToLearn Reports</h3> -->
                 </div>
             </header>
